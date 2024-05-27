@@ -16,15 +16,15 @@ Including another URLconf
 """
 from django.contrib import admin
 from django.urls import path
-from Muna.facade import Register, Login, ScrapedCourses, ScrapedLecture, ScrapedStudent, ScrapedThesis, Schedule
+from Muna.facade import ScrapedCourses, ScrapedLecture, ScrapedStudent, ScrapedThesis, Schedule
 
 urlpatterns = [
     path('admin/', admin.site.urls),
-    path('register/', Register.as_view(), name='register'),
-    path('login/', Login.as_view(), name='login'),
-    path('scraped/lecture/', ScrapedCourses.as_view(), name='scraped dosen'),
-    path('scraped/student/', ScrapedLecture.as_view(), name='scraped mahasiswa'),
-    path('scraped/courses/', ScrapedStudent.as_view(), name='scraped mengajar'),
+    # path('register/', Register.as_view(), name='register'),
+    # path('login/', Login.as_view(), name='login'),
+    path('scraped/lecture/', ScrapedLecture.as_view(), name='scraped dosen'),
+    path('scraped/student/', ScrapedStudent.as_view(), name='scraped mahasiswa'),
+    path('scraped/courses/', ScrapedCourses.as_view(), name='scraped mengajar'),
     path('scraped/thesis/', ScrapedThesis.as_view(), name='scraped tugas akhir'),
     path('schedule/', Schedule.as_view(), name='schedule'),
 ]
