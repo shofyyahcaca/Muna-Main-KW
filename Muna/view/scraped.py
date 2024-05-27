@@ -2,11 +2,19 @@ from django.http import JsonResponse
 from sqlalchemy import create_engine
 from sqlalchemy.orm import sessionmaker
 from Muna.Model import SINAU_DB
-from Muna.Model.sinau import Lecture, WorkUnit, LectureUnit, ScienceConsortium, ScienceLecture
-import uuid, json
+from datetime import datetime
+from Muna.Model.sinau import Student, StudyPrograms, Lecture, WorkUnit, LectureUnit, ScienceConsortium, ScienceLecture
+import uuid, json, re
 
 engine = create_engine(SINAU_DB)
 Session = sessionmaker(bind=engine)
+
+def split_text(text:str):
+    pattern = r'\((.*?)\)'
+    inSideArr = re.findall(pattern, text)
+    outSide = re.sub(pattern, '', text).strip().lower()
+    inSide = ' '.join(inSideArr).strip().lower()
+    return inSide, outSide
 
 def lecture(data):
     session = Session()
@@ -69,6 +77,39 @@ def student(data):
     session = Session()
     if data:
         try:
+            prod = list(dict.fromkeys(value.get("program studi") for value in data if value.get("program studi")))
+            stupro = []
+            for value in prod:
+                inSide, outSide = split_text(value)
+                stupro.append({
+                    "inSide": inSide, 
+                    "outSide": outSide
+                })
+            stuproResult = session.query(StudyPrograms).filter(StudyPrograms.name.in_([value["outSide"] for value in stupro]))
+            stuproName = [st.name for st in stuproResult]
+            stuproModel = [model for model in stuproResult]
+            for value in stupro:
+                if value["outSide"] not in stuproName:
+                    inSide = value["inSide"]  if str(value["inSide"]).strip != '' else "-"
+                    st = StudyPrograms(name=value["outSide"] ,alias=inSide)
+                    session.add(st)
+                    stuproModel.append(st)
+            session.commit()
+            for value in data:
+                time = int(datetime.now().timestamp())
+                _, outSide = split_text(value.get("program studi"))
+                st = [st for st in stuproResult if st.name == outSide][0]
+                student = Student(
+                    stupro_id= st.stupro_id,
+                    student_uuid=str(uuid.uuid4()),
+                    nim= value.get("nim"),
+                    name= value.get("nama"),
+                    jenjang= value.get("jenjang"),
+                    semester= int(value.get("semester")),
+                    created_at= time,
+                    updated_at= time
+                )
+                session.add(student)
             session.commit()
             response = {"message": "success"}
         except Exception as e:

@@ -53,7 +53,7 @@ create table if not exists `science_lecture` (
 create table if not exists `study_programs` (
   `stupro_id` int auto_increment,
   `name` varchar(100) not null,
-  `alias` char(5) not null,
+  `alias` char(100) not null,
   primary key(`stupro_id`)
 ) engine=InnoDB default charset=utf8;
 
@@ -62,8 +62,8 @@ create table if not exists `student` (
   `student_uuid` text not null,
   `stupro_id` int not null,
   `nim` varchar(15) not null,
+  `jenjang` varchar(5) not null,
   `name` varchar(100) not null,
-  `telephone_number` varchar(13) not null,
   `semester` int unsigned not null,
   `created_at` int unsigned not null,
   `updated_at` int unsigned not null,
