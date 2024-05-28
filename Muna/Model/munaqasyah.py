@@ -1,60 +1,35 @@
-# from sqlalchemy import Column, Integer, String, ForeignKey, ForeignKeyConstraint
-# from sqlalchemy.ext.declarative import declarative_base
-# from sqlalchemy.orm import relationship
-# from .auth import User
+from sqlalchemy import Column, Integer, String, ForeignKey, Time
+from sqlalchemy.ext.declarative import declarative_base
+from sqlalchemy.orm import relationship
 
-# Base = declarative_base()
+Base = declarative_base()
 
-# class Topics(Base):
-#     __tablename__ = 'topics'
+class Topic(Base):
+    __tablename__ = 'topics'
+    topic_id = Column(Integer, primary_key=True, autoincrement=True)
+    name = Column(String(100), nullable=False)
 
-#     topic_id = Column(Integer, primary_key=True, autoincrement=True)
-#     name = Column(String(100), nullable=False)
+class TopicRelation(Base):
+    __tablename__ = 'topic_relation'
+    toprel_id = Column(Integer, primary_key=True, autoincrement=True)
+    thesis_uuid = Column(String, nullable=False)
+    topic_id = Column(Integer, ForeignKey('topics.topic_id'), nullable=False)
+    
+    topic = relationship('Topic', back_populates='topic_relations')
 
+Topic.topic_relations = relationship('TopicRelation', order_by=TopicRelation.toprel_id, back_populates='topic')
 
-# class Topic_relation(Base):
-#     __tablename__ = 'topic_relation'
+class Munaqasyah(Base):
+    __tablename__ = 'munaqasyah'
+    muna_id = Column(Integer, primary_key=True, autoincrement=True)
+    lecture_uuid = Column(String, nullable=False)
+    student_uuid = Column(String, nullable=False)
+    munaqasyah = Column(Integer, nullable=False)
 
-#     toprel_id = Column(Integer, primary_key=True, autoincrement=True)
-#     relation = Column(String, nullable=False)
-#     topic_id = Column(Integer, ForeignKey('topics.topic_id'), nullable=False)
-#     created_at = Column(Integer, nullable=False)
-#     updated_at = Column(Integer, nullable=False)
-
-#     topic = relationship("Topics", back_populates="topic_relation")
-
-
-# class Teach_schedule(Base):
-#     __tablename__ = 'teach_schedule'
-
-#     teasch_id = Column(Integer, primary_key=True, autoincrement=True)
-#     name = Column(String, nullable=False)
-#     user_uuid = Column(String, nullable=False)
-#     created_at = Column(Integer, nullable=False)
-#     updated_at = Column(Integer, nullable=False)
-
-#     user = relationship(
-#         'User',
-#         backref='teach_schedule',
-#         primaryjoin='teach_schedule.user_uuid == User.uuid',
-#         foreign_keys=user_uuid,
-#     )
-
-
-# class Lecture_counter(Base):
-#     __tablename__ = 'lecture_counter'
-
-#     lectcount_id = Column(Integer, primary_key=True, autoincrement=True)
-#     user_uuid = Column(String, nullable=False)
-#     name = Column(Integer, nullable=False)
-#     first_week = Column(Integer, nullable=False)
-#     two_week = Column(Integer, nullable=False)
-#     three_week = Column(Integer, nullable=False)
-#     four_week = Column(Integer, nullable=False)
-
-#     user = relationship(
-#         'User',
-#         backref='lecture_counter',
-#         primaryjoin='lecture_counter.user_uuid == User.uuid',
-#         foreign_keys=user_uuid,
-#     )
+class Course(Base):
+    __tablename__ = 'courses'
+    courses_id = Column(Integer, primary_key=True, autoincrement=True)
+    lecture_uuid = Column(String, nullable=False)
+    day = Column(String(20), nullable=False)
+    start_time = Column(Time, nullable=False)
+    end_time = Column(Time, nullable=False)

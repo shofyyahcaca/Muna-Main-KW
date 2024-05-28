@@ -1,13 +1,16 @@
 from django.http import JsonResponse
 from sqlalchemy import create_engine
 from sqlalchemy.orm import sessionmaker
-from Muna.Model import SINAU_DB
+from Muna.Model import SINAU_DB, MUNAQASYAH_DB
 from datetime import datetime
-from Muna.Model.sinau import Student, StudyPrograms, Lecture, WorkUnit, LectureUnit, ScienceConsortium, ScienceLecture
-import uuid, json, re
+from Muna.Model.sinau import Student, StudyPrograms, Lecture, WorkUnit, LectureUnit, ScienceConsortium, ScienceLecture, Thesis
+from Muna.Model.munaqasyah import Course, Topic, TopicRelation
+import uuid, re
 
-engine = create_engine(SINAU_DB)
-Session = sessionmaker(bind=engine)
+sinauEngine = create_engine(SINAU_DB)
+SinauSession = sessionmaker(bind=sinauEngine)
+muanEngine = create_engine(MUNAQASYAH_DB)
+MunaSession = sessionmaker(bind=muanEngine)
 
 def split_text(text:str):
     pattern = r'\((.*?)\)'
@@ -17,7 +20,7 @@ def split_text(text:str):
     return inSide, outSide
 
 def lecture(data):
-    session = Session()
+    session = SinauSession()
     if data:
         try:
             works = list(dict.fromkeys(value.get("Unit Kerja") for value in data if value.get("Unit Kerja")))
@@ -74,7 +77,7 @@ def lecture(data):
     return JsonResponse(response)
 
 def student(data):
-    session = Session()
+    session = SinauSession()
     if data:
         try:
             prod = list(dict.fromkeys(value.get("program studi") for value in data if value.get("program studi")))
@@ -122,15 +125,101 @@ def student(data):
     return JsonResponse(response)
 
 def courses(data):
+    session = MunaSession()
+    sinauSession = SinauSession()
     if data:
-        respons = {"massage": "data valid"}
+        try:
+            lecture = sinauSession.query(Lecture).all()
+            notif = []
+            nullValue = 0
+            for value in data:
+                schedule = value.get("Jadwal Mingguan")
+                teach = value.get("Pengajar")
+                if teach.strip() != "":
+                    nip, name = [item.strip() for item in teach.split('-', 1)]
+                    schedule_pattern = r"(\w+), (\d{2}:\d{2}) s\.d (\d{2}:\d{2}) @ (.+)"
+                    day, start_time, end_time, _ = re.match(schedule_pattern, schedule).groups()
+                    lect = [lec for lec in lecture if lec.nip == nip.strip()]
+                    if lect:
+                        courses = Course(
+                            lecture_uuid= lect[0].lecture_uuid,
+                            day= day,
+                            start_time= datetime.strptime(start_time, '%H:%M').time(),
+                            end_time= datetime.strptime(end_time, '%H:%M').time()
+                        )
+                        session.add(courses)
+                    else:
+                        notif.append(name)
+                else:       
+                    nullValue += 1
+            notification = list(dict.fromkeys(value for value in notif))
+            notification.append(f"{str(nullValue)} value is null")
+            session.commit()
+            response = {"message": "success", "missing": notification}
+        except Exception as e:
+            session.rollback()
+            response = {"message": "error", "details": str(e)}
+        finally:
+            session.close()
+            sinauSession.close()
     else:
-        respons = {"message": "data tidak valid"}
-    return JsonResponse(respons)
+        response = {"message": "data tidak valid"}
+    return JsonResponse(response)
 
 def thesis(data):
+    session = MunaSession()
+    sinauSession = SinauSession()
     if data:
-        respons = {"massage": "data valid"}
+        try:
+            student = sinauSession.query(Student).all()
+            topic = session.query(Topic).all()
+            notif = []
+            relation = []
+            for value in data:
+                title = value.get("judul-TA")
+                name = value.get("Nama")
+                nim = value.get("Nim")
+                time = int(datetime.now().timestamp())
+                stu = [st for st in student if st.nim == nim.strip()]
+                top = re.sub(r'[^\w\s]', '', title).lower().split()
+                if stu:
+                    thesis = Thesis(
+                        thesis_uuid= str(uuid.uuid4()),
+                        student_id= stu[0].student_id,
+                        title= title,
+                        created_at= time,
+                        updated_at= time
+                    )
+                    sinauSession.add(thesis)
+                    for tp in top:
+                        to = [t for t in topic if t.name == tp.strip()]
+                        if to:
+                            tpc = to[0]
+                        else:
+                            tpc = Topic(name=tp.strip())
+                            session.add(tpc)
+                            topic.append(tpc)
+                        relation.append({
+                            "topic": tpc,
+                            "thesis": thesis
+                        })
+                else:
+                    notif.append(name)
+            notification = list(dict.fromkeys(value for value in notif))
+            sinauSession.commit()
+            session.commit()
+            for rel in relation:
+                tpcRelation = TopicRelation(thesis_uuid= rel["thesis"].thesis_uuid, topic_id=rel["topic"].topic_id)
+                session.add(tpcRelation)
+            session.commit()
+            response = {"message": "success", "missing": notification}
+        except Exception as e:
+            session.rollback()
+            sinauSession.rollback()
+            response = {"message": "error", "details": str(e)}
+        finally:
+            session.close()
+            sinauSession.close()
     else:
-        respons = {"message": "data tidak valid"}
-    return JsonResponse(respons)
+        response = {"message": "data tidak valid"}
+    return JsonResponse(response)

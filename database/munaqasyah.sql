@@ -27,3 +27,13 @@ create table if not exists `munaqasyah` (
   `munaqasyah` int not null,
   primary key(`muna_id`)
 ) engine=InnoDB default charset=utf8;
+
+create table if not exists `courses` (
+  `courses_id` int auto_increment,
+  `lecture_uuid` text not null,
+  `day` varchar(20) not null,
+  `start_time` time not null,
+  `end_time` time not null,
+  primary key(`courses_id`)
+) engine=InnoDB default charset=utf8;
+
